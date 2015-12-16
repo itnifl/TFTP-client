@@ -4,7 +4,7 @@ This code is customization of the tftp client found at https://github.com/lanrat
 
 tftpclient.c has been rewritten to allow reading hostnames from the command line. It also now does not wipe files on local disk when they are not found on the tftp server. For my use this has been an necessary addition of functionality.
 
-The old code used a constant defined in tftp.h. The constant is still there, but gets overridden if -h address is specified as a argument to the program. This code is only tested with the use if IP-Addresses, and not DNS names. This code is compiled in Linux on Centos 6.7 to be usable with ESXi.
+The old code used a constant defined in tftp.h. The constant is still there, but gets overridden if -h address is specified as a argument to the program. This code is only tested with the use if IP-Addresses, and not DNS names. This code is compiled in Linux on Centos 6.7 i386 to be usable with ESXi.
 
 To build this code to an executable, install build-essential for the tools you need:
 yum install build-essential gcc make
