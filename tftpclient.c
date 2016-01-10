@@ -1,8 +1,10 @@
 #include "tftp.h"
+void writeBackToFile(char *buffer, char *filename);
 
 //Original code from https://github.com/lanrat/tftp - thank you lanrat!
 //Functions here are rewritten to avoid use of hard coded hostnames or addresses - Atle Holm (atle@team-holm.net) - September 2015
-//Rewrote the getFile function so that it will not empty a file that already exists on local disk when the retrieval of it fails - Atle Holm (atle@team-holm.net)- December 2015
+//Rewrote the getFile function so that it will not empty a file that already exists on local disk when the retrieval of it fails - December 2015
+//Used with Kongsberg Maritime Automated ESXi installer. A part of History Station.
 
 //returns a struct for the server information
 struct sockaddr_in getServerStruct(char *host, int port)
@@ -25,7 +27,8 @@ void getFile(char *host, int port, char *filename)
   int sockfd;
   struct sockaddr_in serv_addr;
   FILE * file;
-  char *buffer;  
+  char *buffer;
+  bool bufferFilled = false;
   if (fileExists(filename)) {
 	  printf("Information: The file %s exists already, reading it into memory to preserve its state in case retreival of new file fails.\n", filename);
 	  file = fopen(filename, "rb");	  
@@ -39,6 +42,7 @@ void getFile(char *host, int port, char *filename)
 		  {	  //Now after this, the buffer contains our file contents, and we will use it later if we need to:
 			  fread(buffer, s, 1, file);
 		  }
+		  bufferFilled = true;
 	  }
 	  fclose(file);
   }
@@ -46,6 +50,7 @@ void getFile(char *host, int port, char *filename)
   if (strchr(filename,'/') != NULL )
   {
     printf("We do not support file transfer out of the current working directory\n");
+	if(bufferFilled) writeBackToFile(buffer, filename);
     return;
   }
 
@@ -55,12 +60,14 @@ void getFile(char *host, int port, char *filename)
   if(sockfd < 0)
   {
     printf("Couldn't open socket\n");
+	if (bufferFilled) writeBackToFile(buffer, filename);
     return;
   }
 
   if(!send_RRQ(sockfd, (struct sockaddr *) &serv_addr, filename, TFTP_SUPORTED_MODE))
   {
     printf("Error: couldn't send RRQ\n");
+	if (bufferFilled) writeBackToFile(buffer, filename);
     return;
   }
   
@@ -69,6 +76,9 @@ void getFile(char *host, int port, char *filename)
   if (file == NULL)
   {
 	  perror(filename);
+	  if (bufferFilled) writeBackToFile(buffer, filename);
+	  else remove(filename);
+
 	  return;
   }
 
@@ -76,23 +86,32 @@ void getFile(char *host, int port, char *filename)
   {
     printf("Error: didn't receive file\n");
 	fclose(file);
-
-	printf("Information: Writing preserved file contents of file %s to disk, since we were not able to retrieve a new file from the server.\n", filename);
-	file = fopen(filename, "w");
-	if (file == NULL)
-	{
-		printf("Error opening file!\n");
-		exit(1);
-	}
-	//We did not receive a new file, so lets put all the text that was in, it back into it:
-	fprintf(file, buffer);
-
-
-	fclose(file);
+	if (bufferFilled) writeBackToFile(buffer, filename);
+	else remove(filename);
     return;
   }
   fclose(file);
   return;
+}
+
+void writeBackToFile(char *buffer, char *filename) {
+	if (buffer != NULL && fileExists(filename)) {
+		printf("Information: Writing preserved file contents of file %s to disk, since we were not able to retrieve a new file from the server.\n", filename);
+		FILE * file = fopen(filename, "w");
+		if (file == NULL)
+		{
+			printf("Error opening file!\n");
+			return;
+		}
+		//We did not receive a new file, so lets put all the text that was in, it back into it:
+		fprintf(file, buffer);
+		fclose(file);
+	}
+	else {
+		printf("File %s either does not exist, or the buffer read from file is empty. Not performing writeback to file. If file is missing/empty, then this message is expected.\n", filename);
+	}
+	
+	return;
 }
 
 int fileExists(char *fname)
