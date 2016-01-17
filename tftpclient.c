@@ -4,7 +4,7 @@ void writeBackToFile(char *buffer, char *filename);
 //Original code from https://github.com/lanrat/tftp - thank you lanrat!
 //Functions here are rewritten to avoid use of hard coded hostnames or addresses - Atle Holm (atle@team-holm.net) - September 2015
 //Rewrote the getFile function so that it will not empty a file that already exists on local disk when the retrieval of it fails - December 2015
-//Used with Kongsberg Maritime Automated ESXi installer. A part of History Station.
+//Improved handeling av files that are supposed to be retrieved if they exist already, and retrieval fails - Atle Holm (atle@team-holm.net) - Januar 2016
 
 //returns a struct for the server information
 struct sockaddr_in getServerStruct(char *host, int port)
